@@ -23,7 +23,7 @@ from datetime import datetime
 from abc import ABC, abstractmethod
 from enum import Enum
 import json
-from typing import Dict, List, Optional, TypedDict, Union, cast
+from typing import List, Optional, TypedDict, cast
 import openai
 
 """
