@@ -387,7 +387,7 @@ talk_to_aiのフォーマットは以下の通りです。
 
 一番最初の目的を私が達成する助けになるよう最善を尽くしてください。
 
-フォーマットはMarkdown形式でお願いします。
+フォーマットはtalk_to_aiを使わないで、Markdown形式でお願いします。
 
 # 会話のまとめ
 """,
@@ -485,7 +485,7 @@ def main():
     メイン関数
     """
     purpose_io = HumanPurposeTerminalIO()
-    human = Human(HumanPurposeTerminalIO())
+    human = Human(GeneralTerminalIO())
     manager_ai = ManagerAI([WorkerAI()])
     message_handler = MessageHandler()
 
