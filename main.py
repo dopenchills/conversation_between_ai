@@ -465,6 +465,10 @@ talk_to_aiのフォーマットは以下の通りです。
                     "Sending purpose to human failed because ManagerAI did not return any result"
                 )
 
+            self.chat_messages.append(
+                cast(openai.types.chat.ChatCompletionMessageParam, response_message)
+            )
+
             if self.human is None:
                 raise Exception(
                     "Sending result to human failed because human is not set"
