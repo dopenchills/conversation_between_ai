@@ -186,8 +186,8 @@ class SummaryFileWriteIO(IO):
 
     def write(self, payload: str):
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        payload_first_10_chars = payload[:20].replace("\n", " ")
-        file_name = f"{timestamp}_{payload_first_10_chars}.md"
+        payload_head = payload[:20].replace("\n", " ")
+        file_name = f"{timestamp}_{payload_head}.md"
         path = os.path.join(os.getcwd(), self.directory, file_name)
 
         with open(path, "w") as f:
