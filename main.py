@@ -121,6 +121,8 @@ class TalkToAIMetadata(TypedDict):
 class TalkToAIPayload(TypedDict):
     to: str
     message: str
+    tasks: List[str]
+    next_task: str
 
 
 class TalkToAIArguments(TypedDict):
@@ -253,6 +255,7 @@ class ManagerAI(MessageSender):
         self.chat_messages: List[openai.types.chat.ChatCompletionMessageParam] = []
         self.worker_ais = worker_ais
         self.human: Optional[Human] = None
+        self.purpose: Optional[str] = None
 
     def receive_message(
         self, message: Message, from_: MessageSender, message_handler: MessageHandler
@@ -281,6 +284,7 @@ class ManagerAI(MessageSender):
         目的を受信する
         """
         self.human = cast(Human, from_)
+        self.purpose = purpose_payload["content"]
 
         purpose = purpose_payload["content"]
 
@@ -302,6 +306,8 @@ class ManagerAI(MessageSender):
 もし一度にChatGPTに指示を出すのが難しければ、簡単な小タスクに分解したのち、その最初のタスクだけを振ってみてください。そしてその後の対話で他のタスクを振ってください。あなたはChatGPTの評価者でありマネージャーとして振る舞うということです。
 
 ChatGPTから抽象的な答えが返ってきたり、あなたが期待する答えが返ってこない場合は、ChatGPTに対してより具体的な指示を出してください。
+
+ChatGPTから得る返答には、必ず大学生でも理由が理解できるような根拠を求めてください。それがない場合は、ChatGPTに対してより具体的な根拠を求めてください。
 
 ## 報酬
 
@@ -327,9 +333,10 @@ talk_to_aiのフォーマットは以下の通りです。
         "continue_": boolean // この対話を続けるかどうか。Yes: true, No: false
     },
     "payload": {
-        "tasks": strings[] // 目的を達成するために分割した小タスクのリスト
         "to": string // このメッセージを送る相手。Allowed values: HUMAN, AI
         "message": string // このメッセージの内容
+        "tasks": strings[] // 目的を達成するために分割した小タスクのリスト
+        "next_task": string // 次に実行するタスク
     }
 }
 ```
@@ -355,6 +362,18 @@ talk_to_aiのフォーマットは以下の通りです。
             )
 
         talk_to_ai_response: TalkToAIArguments = json.loads(response_message.content)
+
+        logger.info(
+            f"""
+==========管理者AIの考えたタスク==========
+タスク:
+{talk_to_ai_response["payload"]["tasks"]}
+
+次のタスク:
+{talk_to_ai_response["payload"]["next_task"]}
+=======================================
+"""
+        )
 
         self.chat_messages.append(
             cast(openai.types.chat.ChatCompletionMessageParam, response_message)
@@ -419,9 +438,10 @@ talk_to_aiのフォーマットは以下の通りです。
         else:
             chat_message_for_summary: openai.types.chat.ChatCompletionMessageParam = {
                 "role": "user",
-                "content": """私> 今までの会話をまとめ、私に向けてレポートを作成し、返してください。
+                "content": f"""私> 今までの会話から私に向けてレポートを作成し、返してください。
 
-一番最初の目的を私が達成する助けになるよう最善を尽くしてください。
+今回の会話の目的は以下の通りです。あなたのレポートは私がこの目的を達成するために書いてください:
+{self.purpose}
 
 フォーマットはtalk_to_aiを使わないで、Markdown形式でお願いします。
 
