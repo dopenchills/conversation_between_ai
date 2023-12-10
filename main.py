@@ -18,7 +18,8 @@
   - [必要な情報が足りない場合] 管理者AIが作業者AIにタスクを振り続ける
   - [必要な情報が揃った場合] 管理者AIが人間にタスクの実行結果を送信する
 """
-
+import os
+from datetime import datetime
 from abc import ABC, abstractmethod
 from enum import Enum
 import json
@@ -157,6 +158,38 @@ class GeneralTerminalIO(IO):
 
     def write(self, payload: str):
         print(payload)
+
+
+class GeneralFileWriteIO(IO):
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+
+    def read(self):
+        pass
+
+    def write(self, payload: str):
+        with open(self.file_path, "w") as f:
+            f.write(payload)
+
+
+class SummaryFileWriteIO(IO):
+    def __init__(self, directory="output/summary"):
+        self.directory = directory
+
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+    def read(self):
+        pass
+
+    def write(self, payload: str):
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        payload_first_10_chars = payload[:10]
+        file_name = f"{timestamp}_{payload_first_10_chars}.md"
+        path = os.path.join(os.getcwd(), self.directory, file_name)
+
+        with open(path, "w") as f:
+            f.write(payload)
 
 
 class HumanPurposeTerminalIO(IO):
@@ -485,7 +518,7 @@ def main():
     メイン関数
     """
     purpose_io = HumanPurposeTerminalIO()
-    human = Human(GeneralTerminalIO())
+    human = Human(SummaryFileWriteIO())
     manager_ai = ManagerAI([WorkerAI()])
     message_handler = MessageHandler()
 
