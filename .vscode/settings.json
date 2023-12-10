@@ -1,0 +1,9 @@
+{
+  "editor.defaultFormatter": "ms-python.black-formatter",
+  "python.defaultInterpreterPath": "venv/bin/python",
+  "[python]": {
+    "diffEditor.ignoreTrimWhitespace": false,
+    "editor.formatOnSave": true,
+    "editor.wordBasedSuggestions": false,
+  },
+}
