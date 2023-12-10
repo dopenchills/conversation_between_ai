@@ -25,7 +25,6 @@ from enum import Enum
 import json
 from typing import Dict, List, Optional, TypedDict, Union, cast
 import openai
-from abc import ABC, abstractmethod
 
 """
 Set up logging
