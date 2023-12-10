@@ -134,14 +134,7 @@ IO
 """
 
 
-class IO(ABC):
-    @abstractmethod
-    def write(self, payload: str):
-        """
-        メッセージを書き込む
-        """
-        pass
-
+class ReadIO(ABC):
     @abstractmethod
     def read(self) -> str:
         """
@@ -150,7 +143,16 @@ class IO(ABC):
         pass
 
 
-class GeneralTerminalIO(IO):
+class WriteIO(ABC):
+    @abstractmethod
+    def write(self, payload: str):
+        """
+        メッセージを書き込む
+        """
+        pass
+
+
+class GeneralTerminalIO(ReadIO, WriteIO):
     def read(self) -> str:
         """
         メッセージを読み込む
@@ -161,27 +163,21 @@ class GeneralTerminalIO(IO):
         print(payload)
 
 
-class GeneralFileWriteIO(IO):
+class GeneralFileWriteIO(WriteIO):
     def __init__(self, file_path: str):
         self.file_path = file_path
-
-    def read(self):
-        pass
 
     def write(self, payload: str):
         with open(self.file_path, "w") as f:
             f.write(payload)
 
 
-class SummaryFileWriteIO(IO):
+class SummaryFileWriteIO(WriteIO):
     def __init__(self, directory="output/summary"):
         self.directory = directory
 
         if not os.path.exists(directory):
             os.makedirs(directory)
-
-    def read(self):
-        pass
 
     def write(self, payload: str):
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -193,15 +189,12 @@ class SummaryFileWriteIO(IO):
             f.write(payload)
 
 
-class HumanPurposeTerminalIO(IO):
+class HumanPurposeTerminalReadIO(ReadIO):
     def read(self) -> str:
         """
         メッセージを読み込む
         """
         return input("目的を入力してください: ")
-
-    def write(self, payload: str):
-        pass
 
 
 """
@@ -214,7 +207,7 @@ class Human(MessageSender):
     人間の入力や出力を管理するクラス
     """
 
-    def __init__(self, result_io: IO):
+    def __init__(self, result_io: WriteIO):
         self.result_io = result_io
 
     def send_purpose(
@@ -574,7 +567,7 @@ def main():
     """
     メイン関数
     """
-    purpose_io = HumanPurposeTerminalIO()
+    purpose_io = HumanPurposeTerminalReadIO()
     human = Human(SummaryFileWriteIO())
     manager_ai = ManagerAI([WorkerAI()])
     message_handler = MessageHandler()
