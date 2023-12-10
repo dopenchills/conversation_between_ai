@@ -35,48 +35,6 @@ basicConfig(format="%(asctime)s [%(name)s][%(levelname)s]: %(message)s", level=I
 logger = getLogger(__name__)
 
 
-my_functions: List[openai.types.chat.ChatCompletionToolParam] = [
-    {
-        "function": {
-            "name": "talk_to_ai",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "metadata": {
-                        "type": "object",
-                        "properties": {
-                            "continue_": {
-                                "type": "boolean",
-                                "description": "Whether we should continue this conversation. Yes: true, No: false",
-                            }
-                        },
-                        "required": ["continue_"],
-                    },
-                    "payload": {
-                        "type": "object",
-                        "properties": {
-                            "to": {
-                                "type": "string",
-                                "enum": ["HUMAN", "AI"],
-                                "description": "To whom this message is sent to. Allowed values: HUMAN, AI",
-                            },
-                            "message": {
-                                "type": "string",
-                                "description": "message you are going to send",
-                            },
-                        },
-                        "required": ["to", "message"],
-                    },
-                },
-                "required": ["metadata", "payload"],
-            },
-            "description": "Use this function to send message to AI",
-        },
-        "type": "function",
-    }
-]
-
-
 """
 メッセージ
 """
@@ -117,7 +75,16 @@ class MessageSender:
         メッセージを送信する
         """
         logger.info(
-            f"Sending message from {self.__class__.__name__} to {to.__class__.__name__}: {message}"
+            f"""
+==========メッセージ==========
+
+送信者: {self.__class__.__name__}
+受信者: {to.__class__.__name__}
+タイプ: {message['type_']}
+
+{message['payload']}
+=============================
+"""
         )
         message_handler.accept_message(message, self, to)
 
@@ -322,7 +289,23 @@ ChatGPT> [ChatGPTの返答]
 
 ### あなたからの出力
 
-あなたはFunction calling "talk_to_ai"のフォーマットで返答してください。""",
+あなたは"talk_to_ai"のフォーマットで返答してください。
+
+talk_to_aiのフォーマットは以下の通りです。
+    
+```json
+{
+    "metadata": {
+        "continue_": boolean // この対話を続けるかどうか。Yes: true, No: false
+    },
+    "payload": {
+        "to": string // このメッセージを送る相手。Allowed values: HUMAN, AI
+        "message": string // このメッセージの内容
+    }
+}
+```
+
+""",
             },
             {"role": "user", "content": f"私> {purpose}"},
         ]
@@ -332,25 +315,19 @@ ChatGPT> [ChatGPTの返答]
         response = openai.chat.completions.create(
             model="gpt-4-1106-preview",
             messages=chat_messages,
-            tools=my_functions,
+            response_format={"type": "json_object"},
         )
+
+        logger.info(response)
 
         response_message = response.choices[0].message
 
-        tool_calls = response_message.tool_calls
-
-        if (
-            tool_calls is None
-            or len(tool_calls) == 0
-            or tool_calls[0].function.name != "talk_to_ai"
-        ):
+        if response_message.content is None:
             raise Exception(
-                "Sending task to worker AI failed because function calling 'talk_to_ai' was not successfully called"
+                "Sending purpose to human failed because ManagerAI did not return any result"
             )
 
-        talk_to_ai_response: TalkToAIArguments = json.loads(
-            tool_calls[0].function.arguments
-        )
+        talk_to_ai_response: TalkToAIArguments = json.loads(response_message.content)
 
         self.chat_messages.append(
             cast(openai.types.chat.ChatCompletionMessageParam, response_message)
@@ -384,26 +361,17 @@ ChatGPT> [ChatGPTの返答]
         response = openai.chat.completions.create(
             model="gpt-4-1106-preview",
             messages=self.chat_messages,
-            tools=my_functions,
+            response_format={"type": "json_object"},
         )
 
         response_message = response.choices[0].message
 
-        tool_calls = response_message.tool_calls
-
-        if (
-            tool_calls is None
-            or len(tool_calls) == 0
-            or tool_calls[0].function.name != "talk_to_ai"
-        ):
+        if response_message.content is None:
             raise Exception(
-                "ManagerAI failed handling tasks because function calling 'talk_to_ai' was not successfully called"
+                "Sending purpose to human failed because ManagerAI did not return any result"
             )
 
-        talk_to_ai_response: TalkToAIArguments = json.loads(
-            tool_calls[0].function.arguments
-        )
-
+        talk_to_ai_response: TalkToAIArguments = json.loads(response_message.content)
         self.chat_messages.append(
             cast(openai.types.chat.ChatCompletionMessageParam, response_message)
         )
