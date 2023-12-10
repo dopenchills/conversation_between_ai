@@ -44,6 +44,7 @@ class MessageType(Enum):
     SEND_PURPOSE = "SEND_PURPOSE"
     SEND_TASK = "SEND_TASK"
     SEND_RESULT = "SEND_RESULT"
+    SEND_SUMMARY = "SEND_SUMMARY"
 
 
 class MessagePurposePayload(TypedDict):
@@ -58,9 +59,18 @@ class MessageResultPayload(TypedDict):
     result: str
 
 
+class MessageSummaryPayload(TypedDict):
+    summary: str
+
+
 class Message(TypedDict):
     type_: MessageType
-    payload: Union[MessagePurposePayload, MessageTaskPayload, MessageResultPayload]
+    payload: Union[
+        MessagePurposePayload,
+        MessageTaskPayload,
+        MessageResultPayload,
+        MessageSummaryPayload,
+    ]
 
 
 class MessageSender:
@@ -205,17 +215,17 @@ class Human(MessageSender):
     def receive_message(
         self, message: Message, from_: MessageSender, message_handler: MessageHandler
     ):
-        if message["type_"] == MessageType.SEND_RESULT:
-            result_payload = cast(MessageResultPayload, message["payload"])
-            self.__receive_result(result_payload)
+        if message["type_"] == MessageType.SEND_SUMMARY:
+            summary_payload = cast(MessageSummaryPayload, message["payload"])
+            self.__receive_summary(summary_payload)
         else:
             raise Exception(f'Invalid message type for Human: {message["type_"]}')
 
-    def __receive_result(self, result_payload: MessageResultPayload):
+    def __receive_summary(self, result_payload: MessageSummaryPayload):
         """
         結果を受信する
         """
-        self.result_io.write(result_payload["result"])
+        self.result_io.write(result_payload["summary"])
 
 
 class ManagerAI(MessageSender):
@@ -313,7 +323,7 @@ talk_to_aiのフォーマットは以下の通りです。
         self.chat_messages.extend(chat_messages)
 
         response = openai.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model="gpt-3.5-turbo-1106",
             messages=chat_messages,
             response_format={"type": "json_object"},
         )
@@ -359,7 +369,7 @@ talk_to_aiのフォーマットは以下の通りです。
         self.chat_messages.append(chat_message)
 
         response = openai.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model="gpt-3.5-turbo-1106",
             messages=self.chat_messages,
             response_format={"type": "json_object"},
         )
@@ -390,14 +400,41 @@ talk_to_aiのフォーマットは以下の通りです。
                 message_handler,
             )
         else:
+            chat_message_for_summary: openai.types.chat.ChatCompletionMessageParam = {
+                "role": "user",
+                "content": """私> 今までの会話をまとめ、私に向けてレポートを作成し、返してください。
+
+一番最初の目的を私が達成する助けになるよう最善を尽くしてください。
+
+フォーマットはMarkdown形式でお願いします。
+
+# 会話のまとめ
+""",
+            }
+
+            self.chat_messages.append(chat_message_for_summary)
+
+            response = openai.chat.completions.create(
+                model="gpt-3.5-turbo-1106",
+                messages=self.chat_messages,
+            )
+
+            response_message = response.choices[0].message
+
+            if response_message.content is None:
+                raise Exception(
+                    "Sending purpose to human failed because ManagerAI did not return any result"
+                )
+
             if self.human is None:
                 raise Exception(
                     "Sending result to human failed because human is not set"
                 )
+
             self.send_message(
                 {
-                    "type_": MessageType.SEND_RESULT,
-                    "payload": {"result": result},
+                    "type_": MessageType.SEND_SUMMARY,
+                    "payload": {"summary": response_message.content},
                 },
                 self.human,
                 message_handler,
@@ -435,7 +472,7 @@ class WorkerAI(MessageSender):
         ]
 
         response = openai.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model="gpt-3.5-turbo-1106",
             messages=chat_messages,
         )
 
