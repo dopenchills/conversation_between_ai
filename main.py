@@ -339,7 +339,7 @@ talk_to_aiのフォーマットは以下の通りです。
         self.chat_messages.extend(chat_messages)
 
         response = openai.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
+            model="gpt-4-1106-preview",
             messages=chat_messages,
             response_format={"type": "json_object"},
         )
