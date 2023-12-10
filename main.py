@@ -26,9 +26,6 @@ import json
 from typing import List, Optional, TypedDict, cast
 import openai
 
-"""
-Set up logging
-"""
 from logging import getLogger, basicConfig, INFO
 
 basicConfig(format="%(asctime)s [%(name)s][%(levelname)s]: %(message)s", level=INFO)
