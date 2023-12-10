@@ -33,6 +33,25 @@ logger = getLogger(__name__)
 
 
 """
+OpenAI Models
+"""
+
+
+class OpenAIModel(Enum):
+    GPT3 = "gpt-3.5-turbo-1106"
+    GPT4 = "gpt-4-1106-preview"
+
+
+OPENAI_MODEL_FOR_MANAGER_AI = os.environ.get(
+    "OPENAI_MODEL_FOR_MANAGER_AI", OpenAIModel.GPT4.value
+)
+
+OPENAI_MODEL_FOR_WORKER_AI = os.environ.get(
+    "OPENAI_MODEL_FOR_WORKER_AI", OpenAIModel.GPT3.value
+)
+
+
+"""
 メッセージ
 """
 
@@ -340,7 +359,7 @@ talk_to_aiのフォーマットは以下の通りです。
         self.chat_messages.extend(chat_messages)
 
         response = openai.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model=OPENAI_MODEL_FOR_MANAGER_AI,
             messages=chat_messages,
             response_format={"type": "json_object"},
         )
@@ -396,7 +415,7 @@ talk_to_aiのフォーマットは以下の通りです。
         self.chat_messages.append(chat_message)
 
         response = openai.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model=OPENAI_MODEL_FOR_MANAGER_AI,
             messages=self.chat_messages,
             response_format={"type": "json_object"},
         )
@@ -443,7 +462,7 @@ talk_to_aiのフォーマットは以下の通りです。
             self.chat_messages.append(chat_message_for_summary)
 
             response = openai.chat.completions.create(
-                model="gpt-4-1106-preview",
+                model=OPENAI_MODEL_FOR_MANAGER_AI,
                 messages=self.chat_messages,
             )
 
@@ -533,7 +552,7 @@ class WorkerAI(MessageSender):
         ]
 
         response = openai.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model=OPENAI_MODEL_FOR_WORKER_AI,
             messages=chat_messages,
         )
 
