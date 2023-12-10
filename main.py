@@ -186,7 +186,7 @@ class SummaryFileWriteIO(IO):
 
     def write(self, payload: str):
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        payload_first_10_chars = payload[:10]
+        payload_first_10_chars = payload[:20].replace("\n", " ")
         file_name = f"{timestamp}_{payload_first_10_chars}.md"
         path = os.path.join(os.getcwd(), self.directory, file_name)
 
@@ -303,7 +303,9 @@ class ManagerAI(MessageSender):
 
 専門家も驚くようなハイクオリティなものを期待しています。そのために必要な数、何度もChatGPTと対話してください。
 
-もし一度にChatGPTに指示を出すのが難しければ、簡単な小タスクに分解したのち、その最初のタスクだけを振ってみてください。そしてその後の対話で他のタスクを振ってください。あなたはChatGPTの評価者でありマネージャーとして振る舞うということです。
+簡単な小タスクに分解したのち、その最初のタスクだけを振ってみてください。そしてその後の対話で他のタスクを振ってください。あなたはChatGPTの評価者でありマネージャーとして振る舞うということです。
+ChatGPTが現在のタスクを完了したら、次のタスクを振ってください。
+全てのタスクが完了するまで、ChatGPTと対話し続けてください。
 
 ChatGPTから抽象的な答えが返ってきたり、あなたが期待する答えが返ってこない場合は、ChatGPTに対してより具体的な指示を出してください。
 
@@ -445,7 +447,7 @@ talk_to_aiのフォーマットは以下の通りです。
 
 フォーマットはtalk_to_aiを使わないで、Markdown形式でお願いします。
 
-# 会話のまとめ
+## 会話のまとめ
 """,
             }
 
@@ -468,10 +470,39 @@ talk_to_aiのフォーマットは以下の通りです。
                     "Sending result to human failed because human is not set"
                 )
 
+            chat_history = "\n"
+            for chat_message in self.chat_messages:
+                chat_history += "```txt\n"
+                chat_history += (
+                    "[" + chat_message["role"] + "]"
+                    if "role" in chat_message
+                    else "[" + chat_message.role + "]"  # type: ignore
+                )
+
+                chat_history += "\n\n"
+
+                if "content" in chat_message:
+                    chat_history += (  # type: ignore
+                        chat_message["content"] if "content" in chat_message else ""
+                    )
+                else:
+                    chat_history += chat_message.content
+                chat_history += "\n```\n\n"
+
+            summary = f"""# 目的
+{self.purpose}
+            
+# ChatGPTとの会話のまとめ
+{response_message.content}
+
+# ChatGPTとの会話の履歴
+{chat_history}
+"""
+
             self.send_message(
                 {
                     "type_": MessageType.SEND_SUMMARY,
-                    "payload": {"content": response_message.content},
+                    "payload": {"content": summary},
                 },
                 self.human,
                 message_handler,
