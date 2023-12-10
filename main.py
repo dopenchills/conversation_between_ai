@@ -328,8 +328,6 @@ talk_to_aiのフォーマットは以下の通りです。
             response_format={"type": "json_object"},
         )
 
-        logger.info(response)
-
         response_message = response.choices[0].message
 
         if response_message.content is None:
