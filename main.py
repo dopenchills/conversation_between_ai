@@ -47,30 +47,13 @@ class MessageType(Enum):
     SEND_SUMMARY = "SEND_SUMMARY"
 
 
-class MessagePurposePayload(TypedDict):
-    purpose: str
-
-
-class MessageTaskPayload(TypedDict):
-    task: str
-
-
-class MessageResultPayload(TypedDict):
-    result: str
-
-
-class MessageSummaryPayload(TypedDict):
-    summary: str
+class MessagePayload(TypedDict):
+    content: str
 
 
 class Message(TypedDict):
     type_: MessageType
-    payload: Union[
-        MessagePurposePayload,
-        MessageTaskPayload,
-        MessageResultPayload,
-        MessageSummaryPayload,
-    ]
+    payload: MessagePayload
 
 
 class MessageSender:
@@ -92,7 +75,7 @@ class MessageSender:
 受信者: {to.__class__.__name__}
 タイプ: {message['type_']}
 
-{message['payload']}
+{message['payload']['content']}
 =============================
 """
         )
@@ -208,7 +191,7 @@ class Human(MessageSender):
         """
         message: Message = {
             "type_": MessageType.SEND_PURPOSE,
-            "payload": {"purpose": purpose},
+            "payload": {"content": purpose},
         }
         self.send_message(message, to, message_handler)
 
@@ -216,16 +199,16 @@ class Human(MessageSender):
         self, message: Message, from_: MessageSender, message_handler: MessageHandler
     ):
         if message["type_"] == MessageType.SEND_SUMMARY:
-            summary_payload = cast(MessageSummaryPayload, message["payload"])
+            summary_payload = message["payload"]
             self.__receive_summary(summary_payload)
         else:
             raise Exception(f'Invalid message type for Human: {message["type_"]}')
 
-    def __receive_summary(self, result_payload: MessageSummaryPayload):
+    def __receive_summary(self, result_payload: MessagePayload):
         """
         結果を受信する
         """
-        self.result_io.write(result_payload["summary"])
+        self.result_io.write(result_payload["content"])
 
 
 class ManagerAI(MessageSender):
@@ -242,11 +225,11 @@ class ManagerAI(MessageSender):
         self, message: Message, from_: MessageSender, message_handler: MessageHandler
     ):
         if message["type_"] == MessageType.SEND_PURPOSE:
-            purpose_payload = cast(MessagePurposePayload, message["payload"])
+            purpose_payload = message["payload"]
             self.__receive_purpose(purpose_payload, from_, message_handler)
 
         if message["type_"] == MessageType.SEND_RESULT:
-            result_payload = cast(MessageResultPayload, message["payload"])
+            result_payload = message["payload"]
             self.__receive_result(result_payload, from_, message_handler)
 
     def select_worker_ai(self) -> "WorkerAI":
@@ -257,7 +240,7 @@ class ManagerAI(MessageSender):
 
     def __receive_purpose(
         self,
-        purpose_payload: MessagePurposePayload,
+        purpose_payload: MessagePayload,
         from_: MessageSender,
         message_handler: MessageHandler,
     ):
@@ -266,7 +249,7 @@ class ManagerAI(MessageSender):
         """
         self.human = cast(Human, from_)
 
-        purpose = purpose_payload["purpose"]
+        purpose = purpose_payload["content"]
 
         chat_messages: List[openai.types.chat.ChatCompletionMessageParam] = [
             {
@@ -344,20 +327,20 @@ talk_to_aiのフォーマットは以下の通りです。
         worker_ai = self.select_worker_ai()
         message: Message = {
             "type_": MessageType.SEND_TASK,
-            "payload": {"task": talk_to_ai_response["payload"]["message"]},
+            "payload": {"content": talk_to_ai_response["payload"]["message"]},
         }
         self.send_message(message, worker_ai, message_handler)
 
     def __receive_result(
         self,
-        result_payload: MessageResultPayload,
+        result_payload: MessagePayload,
         from_: MessageSender,
         message_handler: MessageHandler,
     ):
         """
         結果を受信する
         """
-        result = result_payload["result"]
+        result = result_payload["content"]
 
         chat_message: openai.types.chat.ChatCompletionMessageParam = {
             "role": "user",
@@ -392,7 +375,7 @@ talk_to_aiのフォーマットは以下の通りです。
             self.send_message(
                 {
                     "type_": MessageType.SEND_TASK,
-                    "payload": {"task": talk_to_ai_response["payload"]["message"]},
+                    "payload": {"content": talk_to_ai_response["payload"]["message"]},
                 },
                 worker_ai,
                 message_handler,
@@ -432,7 +415,7 @@ talk_to_aiのフォーマットは以下の通りです。
             self.send_message(
                 {
                     "type_": MessageType.SEND_SUMMARY,
-                    "payload": {"summary": response_message.content},
+                    "payload": {"content": response_message.content},
                 },
                 self.human,
                 message_handler,
@@ -451,19 +434,19 @@ class WorkerAI(MessageSender):
         self, message: Message, from_: MessageSender, message_handler: MessageHandler
     ):
         if message["type_"] == MessageType.SEND_TASK:
-            task_payload = cast(MessageTaskPayload, message["payload"])
+            task_payload = message["payload"]
             self.__receive_task(task_payload, from_, message_handler)
 
     def __receive_task(
         self,
-        task_payload: MessageTaskPayload,
+        task_payload: MessagePayload,
         from_: MessageSender,
         message_handler: MessageHandler,
     ):
         """
         タスクを受信する
         """
-        task = task_payload["task"]
+        task = task_payload["content"]
 
         chat_messages: List[openai.types.chat.ChatCompletionMessageParam] = [
             {"role": "user", "content": task},
@@ -487,7 +470,7 @@ class WorkerAI(MessageSender):
 
         message: Message = {
             "type_": MessageType.SEND_RESULT,
-            "payload": {"result": response_message.content},
+            "payload": {"content": response_message.content},
         }
 
         self.send_message(
