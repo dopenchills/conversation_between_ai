@@ -407,7 +407,7 @@ talk_to_aiのフォーマットは以下の通りです。
         self.chat_messages.append(chat_message)
 
         response = openai.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
+            model="gpt-4-1106-preview",
             messages=self.chat_messages,
             response_format={"type": "json_object"},
         )
@@ -454,7 +454,7 @@ talk_to_aiのフォーマットは以下の通りです。
             self.chat_messages.append(chat_message_for_summary)
 
             response = openai.chat.completions.create(
-                model="gpt-3.5-turbo-1106",
+                model="gpt-4-1106-preview",
                 messages=self.chat_messages,
             )
 
@@ -544,7 +544,7 @@ class WorkerAI(MessageSender):
         ]
 
         response = openai.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
+            model="gpt-4-1106-preview",
             messages=chat_messages,
         )
 
